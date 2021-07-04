@@ -27,12 +27,12 @@ class Layer {
 
     void IncrementAcceleration()
     {
-      
+      acceleration++;
     }
 
     void DecrementAcceleration()
     {
-      
+      acceleration--;
     }
 
     int GetCurrentAcceleration()
@@ -42,12 +42,12 @@ class Layer {
 
     void IncrementLayerSteps()
     {
-      
+      layer_steps++;
     }
 
     void DecrementLayerSteps()
     {
-      
+      layer_steps--;
     }
 
     int GetCurrentLayerSteps()

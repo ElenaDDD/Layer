@@ -78,7 +78,7 @@ int timerCounter = 0;
 Stepper stepper1 = Stepper(STEPS_PER_REVOLUTION, DRIVER_N1_PIN, DRIVER_N2_PIN, DRIVER_N3_PIN, DRIVER_N4_PIN); //on wiring change places of pins 2 & 3
 Layer  layer;
 
-#define ENCODER_DELAY 10;
+#define ENCODER_DELAY 5;
 int encoderDelay = ENCODER_DELAY;
 
 bool ProcessEncoderDelay()
@@ -102,33 +102,19 @@ bool ProcessEncoderDelay()
       }
       else if (m == SET_METERS)
       {
-         if(showNumWhileBlink)
-         {  
           Serial.print("currently selected meters =  ");Serial.println(layer.counter.getCurrentlySelectedTargetInList());
-           //display.ShowMeters(layer.counter.getCurrentlySelectedTargetInList());
-           display.ShowMenu(m, &layer);
-         }
-         else
-         {
-           // display.ClearMeters();
-         }
+           display.ShowMenu(m, &layer, showNumWhileBlink);
       }
       else if (m == SET_ACCELERATION)
       {
-        if(showNumWhileBlink)
-         {  
-          Serial.print("currently set acceleration =  ");Serial.println(layer.GetCurrentAcceleration());
-           display.ShowInt(layer.GetCurrentAcceleration());
-         }
-        
+          Serial.print("show while blink  = "); Serial.println(showNumWhileBlink);         
+           display.ShowMenu(m, &layer, showNumWhileBlink);
       }
       else if (m == SET_LAYER_STEPS)
       {
-        if(showNumWhileBlink)
-         {  
           Serial.print("currently layer steps =  ");Serial.println(layer.GetCurrentLayerSteps());
-           display.ShowInt(layer.GetCurrentLayerSteps());
-         }
+           //display.ShowInt(layer.GetCurrentLayerSteps());
+           display.ShowMenu(m, &layer, showNumWhileBlink);
       }
       else
       {
@@ -140,13 +126,12 @@ bool ProcessEncoderDelay()
 
 void TimerProc(void)
 {
-   //Serial.println("timer");
     timerCounter ++;
     
     showNumWhileBlink =  (timerCounter %2 == 0)  ? true: false;
     
     for (byte i = 0; i < sensorNumbers; i++) {
-      //Serial.println("poll sensors");
+
       
       sensorsArray[i]->PollSensor();
     }
@@ -185,8 +170,7 @@ void TimerProc(void)
           currentMenu = SET_ACCELERATION;
         }
         else if (currentMenu == SET_ACCELERATION)
-        {
-           
+        {           
            Serial.println("Current menu is SET_ACCELERATION, set to SET_LAYER_STEPS");
            layer.SetAcceleration();
            currentMenu = SET_LAYER_STEPS;
@@ -239,8 +223,8 @@ void TimerProc(void)
       //Serial.println("needsRefresh 216");
       needsRefresh = true;
     }
-
-    if (currentMenu == SET_METERS)
+    //TODO: do not update on every timer proc PROBABLY
+    if (currentMenu == SET_METERS || currentMenu == SET_ACCELERATION || currentMenu == SET_LAYER_STEPS )
     {
       //Serial.println("needsRefresh 222");
       needsRefresh = true;
@@ -323,7 +307,7 @@ void setup() {
     Serial.print("Setup finished, button is pressed = ");Serial.println(buttonsArray[1]->IsPressed());
 
     currentMenu = MAIN;
-    //needsRefresh = true;
+
     //shouldUpdateBuzzer= false;
     pinMode(13, OUTPUT);
 
