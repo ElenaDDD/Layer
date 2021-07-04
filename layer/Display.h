@@ -1,4 +1,5 @@
 #include <TimerOne.h>
+#include "Layer.h"
 
 enum Menu{
   MAIN,
@@ -10,7 +11,7 @@ class Display
 {
     private:
       MAX7219 _display;
-        char _charbuf[4];
+        char _charbuf[8];
 
     public:
 
@@ -28,7 +29,7 @@ class Display
       _display.DisplayText(_charbuf, 1);
     };
 
-    void showInt(unsigned int value)
+    void ShowInt(unsigned int value)
     {
       sprintf(_charbuf,"%u", value);
       //Serial.print("_charbuf is");Serial.println(_charbuf);
@@ -43,6 +44,16 @@ class Display
     void ClearMeters()
     {
        _display.DisplayText("    ", 1); //Right justified
+    }
+
+    void ShowMenu(Menu m, Layer* layer)
+    {
+      switch (m)
+      {
+        case SET_METERS:
+            ShowMeters(layer->counter.getCurrentlySelectedTargetInList());
+          break;
+      }
     }
 
 

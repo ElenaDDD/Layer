@@ -51,7 +51,7 @@ Time time;
 Sensor* sensorsArray[sensorNumbers];
 Button* buttonsArray[buttonsNumber];
 
-Counter counter;
+//Counter counter;
 
 Button *resetButton, *encoderButton, *driverOnOffButton;
 Encoder *encoder;
@@ -78,6 +78,13 @@ int timerCounter = 0;
 Stepper stepper1 = Stepper(STEPS_PER_REVOLUTION, DRIVER_N1_PIN, DRIVER_N2_PIN, DRIVER_N3_PIN, DRIVER_N4_PIN); //on wiring change places of pins 2 & 3
 Layer  layer;
 
+#define ENCODER_DELAY 10;
+int encoderDelay = ENCODER_DELAY;
+
+bool ProcessEncoderDelay()
+{
+  return  (encoderDelay == 0) ;
+}
 
 
  void ShowMenu(Menu m)
@@ -90,15 +97,16 @@ Layer  layer;
       if (m == MAIN)
       {   
         //Serial.println("Current menu is MAIN");
-        display.ShowMeters(counter.GetMeters());
+        display.ShowMeters(layer.counter.GetMeters());
         display.ShowTime(time.GetTotalMinutes());
       }
-      else if (m = SET_METERS)
+      else if (m == SET_METERS)
       {
          if(showNumWhileBlink)
          {  
-          Serial.print("currently selected meters =  ");Serial.println(counter.getCurrentlySelectedTargetInList());
-           display.ShowMeters(counter.getCurrentlySelectedTargetInList());
+          Serial.print("currently selected meters =  ");Serial.println(layer.counter.getCurrentlySelectedTargetInList());
+           //display.ShowMeters(layer.counter.getCurrentlySelectedTargetInList());
+           display.ShowMenu(m, &layer);
          }
          else
          {
@@ -109,8 +117,8 @@ Layer  layer;
       {
         if(showNumWhileBlink)
          {  
-          Serial.print("currently selected meters =  ");Serial.println(counter.getCurrentlySelectedTargetInList());
-           display.ShowMeters(counter.getCurrentlySelectedTargetInList());
+          Serial.print("currently set acceleration =  ");Serial.println(layer.GetCurrentAcceleration());
+           display.ShowInt(layer.GetCurrentAcceleration());
          }
         
       }
@@ -118,8 +126,8 @@ Layer  layer;
       {
         if(showNumWhileBlink)
          {  
-          Serial.print("currently selected meters =  ");Serial.println(counter.getCurrentlySelectedTargetInList());
-           display.ShowMeters(counter.getCurrentlySelectedTargetInList());
+          Serial.print("currently layer steps =  ");Serial.println(layer.GetCurrentLayerSteps());
+           display.ShowInt(layer.GetCurrentLayerSteps());
          }
       }
       else
@@ -153,7 +161,7 @@ void TimerProc(void)
     {
       Serial.println("reset pressed");
       time.ResetTimer();
-      counter.Reset();
+      layer.counter.Reset();
       Serial.println("needsRefresh 160");
       needsRefresh = true;
     }
@@ -168,12 +176,25 @@ void TimerProc(void)
           Serial.println("Current menu is MAIN, set to SET_METERS");
           currentMenu = SET_METERS;
         }
-        else if (currentMenu = SET_METERS){
+        else if (currentMenu == SET_METERS){
         //if we're in target meters menu 
         //save target
         // goto main
-        Serial.println("Current menu is SET_METERS, set to MAIN");
-          counter.SetTargetMeters();
+        Serial.println("Current menu is SET_METERS, set to SET_ACCELERATION");
+          layer.counter.SetTargetMeters();
+          currentMenu = SET_ACCELERATION;
+        }
+        else if (currentMenu == SET_ACCELERATION)
+        {
+           
+           Serial.println("Current menu is SET_ACCELERATION, set to SET_LAYER_STEPS");
+           layer.SetAcceleration();
+           currentMenu = SET_LAYER_STEPS;
+        }
+        else if (currentMenu == SET_LAYER_STEPS)
+        {
+          Serial.println("Current menu is SET_LAYER_STEPS, set to MAIN");
+          layer.SetLayerSteps();
           currentMenu = MAIN;
         }
         Serial.println("needsRefresh 182");
@@ -193,10 +214,10 @@ void TimerProc(void)
     //check opticalSensor
     if (opticalSensor_counter->IsNewLeaf())
     {
-      counter.AddDistance(opticalSensor_counter->GetDistanceToIncrease());
+      layer.counter.AddDistance(opticalSensor_counter->GetDistanceToIncrease());
     // needsRefresh = true;
     }
-    if (counter.DidIncrease())
+    if (layer.counter.DidIncrease())
     {
         //Serial.println("needsRefresh 204");
         needsRefresh = true;
@@ -206,7 +227,7 @@ void TimerProc(void)
       if (timerCounter % 2  == 0)
       {
         // Serial.println("Adding distance");
-        counter.AddDistance(opticalSensor_counter->GetDistanceToIncrease());
+        layer.counter.AddDistance(opticalSensor_counter->GetDistanceToIncrease());
       }
 #endif
     
@@ -245,6 +266,11 @@ void TimerProc(void)
       digitalWrite(13,0);
       shouldUpdateBuzzer = false;
     }*/ //we won't need this probably
+
+    if (encoderDelay != 0)
+    {
+      encoderDelay--;
+    }
 }
 
 
@@ -261,8 +287,11 @@ void setup() {
 
 
   //setup reset button;
-    pinMode(RESETBUTTON_PIN, INPUT);
-    pinMode(OPTICALSENSOR_COUNTER_PIN, INPUT);
+    pinMode(RESETBUTTON_PIN, INPUT_PULLUP);
+    pinMode(OPTICALSENSOR_COUNTER_PIN, INPUT_PULLUP);
+    pinMode(ENCODERBUTTON_PIN, INPUT_PULLUP);
+    pinMode(ENCODECLK_PIN, INPUT_PULLUP);
+    pinMode(ENCODERDT_PIN, INPUT_PULLUP);
     //Serial.println("delay value  = ");Serial.println( BUTTON_DELAY/ TIMER_PERIOD );
     resetButton = new Button();
     resetButton->Init(RESETBUTTON_PIN, BUTTON_DELAY/ TIMER_PERIOD , RESETBUTTON_PRESSED_STATE);
@@ -290,7 +319,7 @@ void setup() {
 
     //pinMode(BUZZER_PIN, OUTPUT);
     display.Clear();
-    counter.Init(SIGNAL_METERS);
+    layer.counter.Init(SIGNAL_METERS);
     Serial.print("Setup finished, button is pressed = ");Serial.println(buttonsArray[1]->IsPressed());
 
     currentMenu = MAIN;
@@ -347,7 +376,7 @@ void loop() {
     shouldUpdateBuzzer = false;
   }*/
 
-  if (currentMenu == SET_METERS)
+  if (currentMenu == SET_METERS || currentMenu == SET_ACCELERATION || currentMenu == SET_LAYER_STEPS)
       {
       encoder_A = digitalRead(ENCODECLK_PIN);
       encoder_B = digitalRead(ENCODERDT_PIN);
@@ -362,8 +391,29 @@ void loop() {
           //Значит вращение происходит по часовой стрелке
           //Здесь можно вставить операцию инкремента
           //Здесь можно вставлять какие либо свои 
-          //операции по обработке данных в нужном направлении
-          counter.IncrementTarget();
+          //операции по обработке данных в нужном направлени
+          bool canProcess = ProcessEncoderDelay();
+          if (canProcess)
+          {
+             encoderDelay = ENCODER_DELAY;
+          Serial.println("increment");
+          switch (currentMenu)
+          {
+            case SET_METERS: 
+              layer.counter.IncrementTarget();
+              break;
+            case SET_ACCELERATION:
+              layer.IncrementAcceleration();
+              break;
+            case SET_LAYER_STEPS:
+              layer.IncrementLayerSteps();
+              break;
+            default:
+              //do nothing
+              break;
+          }
+          }
+          
           
         }
         //Если уровень сигнала В низкий
@@ -373,7 +423,27 @@ void loop() {
           //Здесь можно вставить операцию декремента
           //Здесь можно вставлять какие либо свои 
           //операции по обработке данных в нужном направлении
-           counter.DecrementTarget();
+          bool canProcess = ProcessEncoderDelay();
+          if (canProcess)
+          {
+            encoderDelay = ENCODER_DELAY;
+            Serial.println("decrement");
+             switch (currentMenu)
+            {
+              case SET_METERS: 
+                layer.counter.DecrementTarget();
+                break;
+              case SET_ACCELERATION:
+                layer.DecrementAcceleration();
+                break;
+              case SET_LAYER_STEPS:
+                layer.DecrementLayerSteps();
+                break;
+              default:
+                //do nothing
+                break;
+            }
+          }
         }
       }
       //Обязательно нужно сохранить состояние текущего уровня сигнала А

@@ -1,3 +1,6 @@
+#ifndef COUNTER_H
+#define COUNTER_H
+
 #include "Direction.h"
 
 #define OPTIONS_COUNT 8
@@ -120,3 +123,6 @@ class Counter{
     return did;
   }
 };
+
+
+#endif
