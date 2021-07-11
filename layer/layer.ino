@@ -34,10 +34,12 @@
 #define OPTICALSENSOR_COUNTER_PIN 20
 #define OPTICALSENSOR_PARKING_PIN 21
 
-#define RESETBUTTON_PIN 22
-#define RESETBUTTON_PRESSED_STATE 1
+#define START_STOP_BUTTON_PIN 22
+#define START_STOP_BUTTON_PRESSED_STATE 1
 
 #define SIGNAL_METERS 10
+
+#define MINDEXPERIMENT
 
 
 Display display;
@@ -100,6 +102,11 @@ bool ProcessEncoderDelay()
         display.ShowMeters(layer.counter.GetMeters());
         display.ShowTime(time.GetTotalMinutes());
       }
+      else if (m == SET_SPOOL_DEPTH)
+      {
+         Serial.print("currently selected spool length in mm =  ");Serial.println(layer.GetCurrentSpoolDepth());
+           display.ShowMenu(m, &layer, showNumWhileBlink);
+      }
       else if (m == SET_METERS)
       {
           Serial.print("currently selected meters =  ");Serial.println(layer.counter.getCurrentlySelectedTargetInList());
@@ -158,7 +165,13 @@ void TimerProc(void)
        //if we're in main, than go to choose target meters
         if (currentMenu == MAIN)
         {
-          Serial.println("Current menu is MAIN, set to SET_METERS");
+          Serial.println("Current menu is MAIN, set to SET_SPOOL_LENGTH");
+          currentMenu = SET_SPOOL_DEPTH;
+        }
+        else if (currentMenu == SET_SPOOL_DEPTH)
+        {
+           Serial.println("Current menu is SET_SPOOL_LENGTH, set to SET_METERS");
+           layer.SetSpoolLength();
           currentMenu = SET_METERS;
         }
         else if (currentMenu == SET_METERS){
@@ -260,7 +273,7 @@ void TimerProc(void)
 
 const int stepsPerRevolution = 1000;
 
-// Create stepper object called 'myStepper', note the pin order:
+
 
 
 
@@ -271,14 +284,14 @@ void setup() {
 
 
   //setup reset button;
-    pinMode(RESETBUTTON_PIN, INPUT_PULLUP);
+    pinMode(START_STOP_BUTTON_PIN, INPUT_PULLUP);
     pinMode(OPTICALSENSOR_COUNTER_PIN, INPUT_PULLUP);
     pinMode(ENCODERBUTTON_PIN, INPUT_PULLUP);
     pinMode(ENCODECLK_PIN, INPUT_PULLUP);
     pinMode(ENCODERDT_PIN, INPUT_PULLUP);
     //Serial.println("delay value  = ");Serial.println( BUTTON_DELAY/ TIMER_PERIOD );
     resetButton = new Button();
-    resetButton->Init(RESETBUTTON_PIN, BUTTON_DELAY/ TIMER_PERIOD , RESETBUTTON_PRESSED_STATE);
+    resetButton->Init(START_STOP_BUTTON_PIN, BUTTON_DELAY/ TIMER_PERIOD , START_STOP_BUTTON_PRESSED_STATE);
     sensorsArray[0] = resetButton;
     buttonsArray[0] = resetButton;
 
@@ -328,7 +341,7 @@ void setup() {
   Serial.begin(9600);
 }*/
 void loop() {
-  // Step one revolution in one direction:
+
   
   
   /*Serial.println("clockwise");
@@ -434,4 +447,7 @@ void loop() {
       //для использования этого значения в следующем цикле сканирования программы
       encoder_A_prev = encoder_A;
       }
+
+
+      
 }

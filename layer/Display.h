@@ -3,6 +3,7 @@
 
 enum Menu{
   MAIN,
+  SET_SPOOL_DEPTH,
   SET_METERS,
   SET_ACCELERATION,
   SET_LAYER_STEPS
@@ -14,7 +15,7 @@ class Display
 {
     private:
       MAX7219 _display;
-        char _charbuf[4];
+      char _charbuf[4];
 
     public:
 
@@ -55,21 +56,25 @@ class Display
       switch (m)
       {
         case SET_METERS:
-            _display.DisplayText("FO",LEFT);
+            _display.DisplayText("F1",LEFT);
             if (showValue) ShowMeters(layer->counter.getCurrentlySelectedTargetInList());
           break;
          case SET_ACCELERATION:
-            _display.DisplayText("F1", LEFT);
+            _display.DisplayText("F2", LEFT);
             if (showValue)  ShowInt(layer->GetCurrentAcceleration());
             break;
          case SET_LAYER_STEPS:
-            _display.DisplayText("F2", LEFT);
+            _display.DisplayText("F3", LEFT);
             if (showValue)  ShowInt(layer->GetCurrentLayerSteps());
+            break;
+         case SET_SPOOL_DEPTH:
+            _display.DisplayText("F0", LEFT);
+            if (showValue)  ShowInt(layer->GetCurrentSpoolDepth());
             break;
         if (!showValue) _display.DisplayText("     ", RIGHT);
       }
     }
-
+    
 
 
     void Begin()
